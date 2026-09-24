@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 import { execSync } from "child_process";
-import { writeFileSync, readFileSync, unlinkSync } from "fs";
+import { writeFileSync, readFileSync, unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
+
+const profilePath = join(process.cwd(), "pq_profile.icc");
+
+function ensureProfile() {
+  if (existsSync(profilePath)) return;
+  const script = join(process.cwd(), "scripts", "pq-profile.swift");
+  execSync(`swift "${script}" "${profilePath}"`, { stdio: "pipe" });
+}
 
 export async function POST(req: NextRequest) {
   let tmpPath = "";
@@ -65,7 +73,7 @@ export async function POST(req: NextRequest) {
     tmpPath = join(tmpdir(), `${randomUUID()}.jpg`);
     writeFileSync(tmpPath, jpegBuffer);
 
-    const profilePath = join(process.cwd(), "public", "pq_profile.icc");
+    ensureProfile();
     execSync(`sips --embedProfile "${profilePath}" "${tmpPath}"`, {
       stdio: "pipe",
     });
